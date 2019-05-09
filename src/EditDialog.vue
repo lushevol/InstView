@@ -1,5 +1,5 @@
 <template>
-  <el-dialog :visible.sync="show.dialogVisible" class="edit-dialog" width="80vw" top="5vh">
+  <el-dialog :visible.sync="show.dialogVisible" class="edit-dialog" :width="dialogWidth" top="5vh">
     <div slot="title">
       <slot name="title"></slot>
     </div>
@@ -38,6 +38,12 @@ export default {
     },
     selectOptions: {
       type: Object
+    },
+    configs: {
+      type: Object,
+      default: () => {
+        return {}
+      }
     }
   },
   watch: {
@@ -59,14 +65,31 @@ export default {
       }
     }
   },
+  computed: {
+    dialogStyleConfigs() {
+      return this.configs.style && this.configs.style.editDialog || {}
+    },
+    dialogWidth() {
+      const width = this.dialogStyleConfigs.width
+      if(width) {
+
+      } else {
+        if(this.referTable.length > 15) {
+          return '80vw'
+        } else {
+          return '50vw'
+        }
+      }
+    }
+  },
   methods: {
     /**
      * @description: 修改某个字段的时候通知父组件
      * @param { prop, value} key & value
      * @return:
      */
-    updateParam({ prop, value}) {
-      this.$emit('paramChange', { key: prop, value})
+    updateParam({ prop, value, item}) {
+      this.$emit('paramChange', { key: prop, value, item})
     },
     Submit() {
       this.$refs['inner-form'].Submit().then((result) => {
@@ -117,7 +140,7 @@ export default {
   .edit-dialog {
     .el-dialog {
       .el-dialog__body {
-        padding: 0;
+        padding: 0 50px 0 0;
       }
     }
   }

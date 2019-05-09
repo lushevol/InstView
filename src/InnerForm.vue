@@ -1,10 +1,10 @@
 <template>
   <el-form 
-    class="inner-form" 
+    :class="['inner-form', formPosition, formCols]"
     :rules="rules" 
     :model="formData" 
     ref="form">
-    <div v-for="(item, index) in formLines" :key="index">
+    <div v-for="(item, index) in formLines" :key="index" class="form-row" v-if="!item.hidden">
       <el-form-item :label="item.label" :label-width="style.formLabelWidth" v-if="ifItemVisible({item, formData})" :prop="item.prop">
         <TagsInput 
           v-if="item.tags" 
@@ -24,8 +24,12 @@
 </template>
 
 <script>
+// components
 import TypesInput from './typesInput'
 import TagsInput from './tagsInput'
+
+// utils
+// import { validateIp } from '@/utils/validate'
 
 export default {
   name: 'InnerForm',
@@ -55,6 +59,12 @@ export default {
     // form中出现的select的options，需要对应prop
     selectOptions: {
       type: Object
+    },
+    configs: {
+      type: Object,
+      default: () => {
+        return {}
+      }
     }
   },
   watch: {
@@ -70,18 +80,49 @@ export default {
       deep: true
     },
     /**
-     * @description: 当referTable变更时，重新渲染
+     * @description: 当referTable变更时，重新渲染(不在这里做初始化，避免数据异步)
      * @param {type} 
      * @return: 
      */
-    referTable: {
-      handler(newVal, oldVal) {
-        if(newVal) {
-          this.dataInitial()
+    // referTable: {
+    //   handler(newVal, oldVal) {
+    //     if(newVal) {
+    //       this.dataInitial()
+    //     }
+    //   },
+    //   immediate: true, 
+    //   deep: true
+    // }
+  },
+  computed: {
+    formStyleConfigs() {
+      return this.configs.style && this.configs.style.form || {}
+    },
+    /**
+     * @description: middle 居中, left 靠左, right 靠右 
+     * @param {type} 
+     * @return: 
+     */
+    formPosition() {
+      const position = this.formStyleConfigs.position || 'middle'
+      return position
+    },
+    /**
+     * @description: form 分几列，默认1列
+     * @param {type} 
+     * @return: 
+     */
+    formCols() {
+      const cols = this.formStyleConfigs.cols
+      if(cols) {
+        return `cols-${cols}`
+      } else {
+        if(this.referTable.length > 15) {
+          return 'cols-wrap'
+        } else {
+          return 'cols-nowrap'
         }
-      },
-      immediate: true, 
-      deep: true
+      }
     }
   },
   methods: {
@@ -137,17 +178,17 @@ export default {
      * @return: 
      */
     resetValid() {
-      this.$refs['form'].resetFields();
+      this.$refs['form'].clearValidate();
     },
     /**
      * @description: 更新formData指定字段
      * @param {type} 
      * @return: 
      */
-    updateData({ prop, value }) {
+    updateData({ prop, value, alias }) {
       this.$set(this.formData, prop, value)
-      this.editedProp.add(prop)
-      this.$emit('paramChange', { prop, value })
+      this.editedProp.add(alias || prop)
+      this.$emit('paramChange', { prop, value, item: this.formData })
     },
     /**
      * @description: 初始化form数据，以referTable为基准，从dataProps中获取初始数据
@@ -175,23 +216,34 @@ export default {
                                               // [year/month/date/dates/week/datetime/datetimerange/daterange/monthrange] 日期
                                               // [time] 时间
             format: refItem.format,           // 规定value的格式，仅部分type生效
+            placeholder: refItem.placeholder, // placeholder 属性
             rows: refItem.rows,               // textarea rows 属性
             options: selectOptions            // select的选项
           })
 
-          // 赋值
-          this.$set(this.formData, refItem.prop, this.dataProps[refItem.prop] || refItem.default || '') // 从传入数据中获取 || 从默认值中获取
-
           // 设置rules
+          const ruleType = this.parseRuleType(refItem.type)
           if(refItem.required) {
-            this.$set(this.rules, refItem.prop, { required: true, message: `请${selectOptions ? '选择' : '填写'}${refItem.label}` })
+            // 初始化rule
+            this.$set(this.rules, refItem.prop, [])
+            // 如果有type，且不是初始的string
+            this.rules[refItem.prop].push(ruleType)
+            // 如果是必填项
+            if(refItem.required) {
+              this.rules[refItem.prop].push({ required: true, message: `请${selectOptions ? '选择' : '填写'}${refItem.label}` })
+            }
           }
+          
+          // 赋格式化初始值
+          this.$set(this.formData, refItem.prop, this.initDefaultValue({ value: (this.dataProps[refItem.prop] || refItem.default || ''), type: refItem.type })) // 从传入数据中获取 || 从默认值中获取 || 空
         }
       })
       this.originFormData = Object.assign({}, this.formData)
+
       // FIXME 防止rule检测出现错乱，如果不加，则会乱掉
+      this.resetFormRules()
+      // 在form渲染时重置编辑数据
       setTimeout(() => {
-        this.resetFormRules()
         this.editedProp.clear()
       })
     },
@@ -211,20 +263,66 @@ export default {
      * @return: 
      */
     clearData() {
+      this.resetFormData()
       this.formLines.splice(0)
-      this.formData = {}
+      // this.formData = {}
       this.originFormData = {}
       this.rules = {}
       this.editedProp.clear()
-      // this.clearObjectData(this.formData)
-      // this.clearObjectData(this.rules)
+    },
+    /**
+     * @description: 格式化初始值，变成正确的格式
+     * @param {type} 
+     * @return: 
+     */
+    initDefaultValue({ value, type = 'string' }) {
+      if(type === 'number') {
+        return Number(value)
+      } else if (type === 'stringNumber') {
+        return String(Number(value))
+      } else {
+        return value
+      }
+    },
+    /**
+     * @description: 根据referTable中的type，生成对应的rule的type
+     * @param {type} 
+     * @return: 
+     */
+    parseRuleType(type) {
+      let rule = { type : 'string' }  // 组件类型：text 普通输入框，select 下拉框，date：日期选择
+
+      // 数字类型
+      if(type === 'number') {
+        rule.type = 'number'
+        rule.message = '只能填写数字'
+        rule.trigger = ['blur', 'change']
+
+      // 只包含数字的string类型
+      } else if (type === 'stringNumber') {
+        rule.pattern = /^\d+$/
+        rule.message = '只能填写数字'
+        rule.trigger = ['blur', 'change']
+
+      // IP格式
+      } else if (type === 'ip') {
+        rule.pattern = /^(\d{1,2}|1\d\d|2[0-4]\d|25[0-5])(\.(\d{1,2}|1\d\d|2[0-4]\d|25[0-5])){3}$/,
+        rule.message = '请输入正确IP格式' 
+      // } else if(['year', 'month', 'date', 'dates', 'week', 'datetime', 'datetimerange', 'daterange', 'monthrange', 'time'].includes(type)) {
+      //   rule.type = 'date'
+      //   rule.message = '请输入日期'
+      } else if (type instanceof RegExp){
+        rule.pattern = type
+        rule.message = '格式错误'
+      }
+      return rule
     },
     ifItemVisible({ item, formData }) {
       if(item.hidden) {
         if(typeof item.hidden === 'boolean') {
           return !item.hidden
         } else if (typeof item.hidden === 'function') {
-          return item.hidden({ item, formData })
+          return !item.hidden({ item, formData })
         } else {
           return true
         }
@@ -233,22 +331,43 @@ export default {
       }
     },
     /**
+     * @description: 设置一个对象的每项为空值
+     * @param {type}
+     * @return:
+     */
+    resetObjectValue(obj) {
+      Object.keys(obj).map(item => {
+        this.$set(obj, item, '')
+      })
+    },
+    /**
+     * @description: 重置formdata内容，将属性值设置为空
+     * @param {type}
+     * @return:
+     */
+    resetFormDataValue() {
+      this.resetObjectValue(this.formData)
+      this.resetFormRules()
+    },
+    /**
      * @description: 清空一个对象的每项
      * @param {type} 
      * @return: 
      */
     clearObjectData(obj) {
       Object.keys(obj).map(item => {
-        this.$set(obj, item, '')
+        // this.$set(obj, item, '')
+        delete obj[item]
       })
     },
     /**
-     * @description: 重置formdata内容，暂时无用
+     * @description: 重置formdata内容，被父组件调用
      * @param {type} 
      * @return: 
      */
     resetFormData() { 
       this.clearObjectData(this.formData)
+      this.resetFormRules()
     },
     /**
      * @description: 重置rule参数
@@ -257,7 +376,9 @@ export default {
      */
     resetFormRules() {
       if(this.$refs['form']) {
-        this.$refs['form'].resetFields();
+        setTimeout(() => {
+          this.$refs['form'].resetFields();
+        })
       }
     }
   },
@@ -273,10 +394,25 @@ export default {
 }
 </script>
 
-<style lang="scss" scoped>
+<style lang="scss">
   .inner-form {
+    display: flex;
+    flex-direction: column;
+    &.cols-wrap {
+      flex-flow: wrap;
+    }
+    &.middle .form-row {
+      margin: 0 auto;
+    }
+    &.middle .form-row {
+      margin-left: 40px
+    }
     .el-form-item {
-      margin-bottom: 6px;
+      margin-bottom: -4px;
+      .el-form-item__error {
+        position: relative;
+      }
     }
   }
+
 </style>
