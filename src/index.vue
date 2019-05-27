@@ -5,7 +5,7 @@
     </template>
     <template slot="operation">
       <!-- create 按钮 -->
-      <el-button size="mini" @click="createNode" type="primary">
+      <el-button v-if="isAllowed2Add" size="mini" @click="createNode" type="primary">
         <slot name="create-btn-text">增加</slot>
       </el-button>
       <!-- 额外operation slot -->
@@ -16,12 +16,15 @@
       <InstantTable
         @edit="editNode"
         @delete="deleteNode"
+        :optionsProps="tableOptions"
         :tableHeaderProps="table.header"
-        :tableDataProps="tableData">
+        :tableDataProps="tableData"
+        :methodFunctions="methodFunctions">
       </InstantTable>
       <!-- 新增和编辑的弹窗 -->
       <EditDialog
         ref="editDialog"
+        :configs="configs"
         @formDataOnChange="dialogFormDataOnChange"
         @submit="updateData"
         :selectOptions="selectOptions"
@@ -49,6 +52,9 @@ export default {
     return {
       tableData: [],
       editData: {},
+      tableOptions: {
+        defaultLoading: true
+      },
       type: '' // 弹窗作用，编辑update/新增create
     }
   },
@@ -60,6 +66,13 @@ export default {
     table: {
       type: Object,
       required: true
+    },
+    configs: {
+      type: Object
+    },
+    isAllowed2Add: {
+      type: Boolean,
+      default: true
     }
   },
   mixins: [
@@ -98,11 +111,13 @@ export default {
     createNode() {
       this.editData = {}
       this.type = 'create'
+      this.$emit('createNode')
       this.showDialog('editDialog')
     },
     editNode({ rowData }) {
       this.editData = rowData
       this.type = 'update'
+      this.$emit('editNode')
       this.showDialog('editDialog')
     },
     deleteNode({ rowData, index }) {

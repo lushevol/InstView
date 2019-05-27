@@ -1,19 +1,22 @@
 <template>
   <div class="crud-table">
-    <search-table 
+    <search-table
+      @onChecklistChange="onChecklistChange"
       @selectRows="selectRows"
       :tableDataProps="tableData" 
       :tableHeaderProps="tableHeader" 
       :optionsProps="tableOptions"
       ref="table">
       <div :slot="item.prop" slot-scope="scope" v-for="(item, index) in tableHeader" :key="index" v-if="item.prop !== 'operation'">
-        <span v-text="getFieldValue(scope.data.row, item)"></span>
+        <el-tag v-if="item.el === 'tag' && getFieldValue(scope.data.row, item).text" v-text="getFieldValue(scope.data.row, item).text" :type="getFieldValue(scope.data.row, item).type"></el-tag>
+        <span v-else v-text="getFieldValue(scope.data.row, item).text"></span>
       </div>
       <template slot="operation" slot-scope="scope">
         <el-button size="mini" v-if="methodFunctions.showEdit ? methodFunctions.showEdit(scope.data.row) : true" type="primary"
-                   @click="editAction(scope.data)">编辑</el-button>
+                   @click="editAction(scope.data)" :disabled="methodFunctions.editDisabled ? methodFunctions.editDisabled(scope.data.row) : false">{{ getButtonText('edit') }}</el-button>
         <el-button size="mini" v-if="methodFunctions.showDelete ? methodFunctions.showDelete(scope.data.row) : true" type="danger"
-                   @click="deleteAction(scope.data)">删除</el-button>
+                   @click="deleteAction(scope.data)">{{ getButtonText('delete') }}</el-button>
+        <slot name="operation-extra-btns"></slot>
       </template>
     </search-table>
   </div>
@@ -51,8 +54,11 @@ export default {
           showEdit: ()=> {
             return true
           },
-          showDelete: ()=>{
+          showDelete: ()=> {
             return true
+          },
+          editDisabled: ()=> {
+            return false
           }
         }
       }
@@ -87,25 +93,34 @@ export default {
         if(referType === 'object') {
           const objectType = Object.prototype.toString.call(item.refer)
           if(objectType === '[object Array]') {
-            let res = rawVal
+            let text = rawVal
+            let type = ''
             item.refer.map(itemRow => {
-              if(itemRow.value === res) {
-                res = itemRow.label
+              if(itemRow.value === text) {
+                text = itemRow.label
+                type = itemRow.type
               }
             })
-            return res
+            return { text, type }
           } else if(objectType === '[object Object]') {
-            return item.refer[rawVal] || rawVal
+            if(typeof item.refer[rawVal] === 'object') {
+              return { text: item.refer[rawVal].text || rawVal, type: item.refer[rawVal].type }
+            } else {
+              return { text: item.refer[rawVal] || rawVal }
+            }
           }
         } else if (referType === 'function') {
-          return item.refer({ rawVal })
+          return { text: item.refer({ rawVal }) }
         }
       } else {
-        return rawVal
+        return { text: rawVal }
       }
     },
     editAction(scopeData) {
-      this.$emit('edit', { rowData: scopeData.row || {} })
+      const currentPage = this.$refs['table'].tableOptions.pagination.currentPage
+      const pageSize = this.$refs['table'].tableOptions.pagination.pageSize
+      const index = scopeData.$index + (currentPage -1) * pageSize
+      this.$emit('edit', { rowData: scopeData.row || {}, index })
     },
     deleteAction(scopeData) {
       this.$confirm('是否删除?', '提示', {
@@ -121,8 +136,42 @@ export default {
 
       });
     },
+    /**
+     * @description: 上传选择的行数据
+     * @param {type} 
+     * @return: 
+     */
     selectRows({ rowDatas }) {
       this.$emit('selectRows', { rowDatas })
+    },
+    /**
+     * @description: 清空选择
+     * @param {type} 
+     * @return: 
+     */
+    clearSelection() {
+      this.$refs['table'].clearSelection()
+    },
+    getButtonText(buttonType) {
+      let buttonText = ''
+      if (this.tableOptions && this.tableOptions.buttonText) {
+        buttonText = this.tableOptions.buttonText[buttonType]
+      }
+      if (buttonText) {
+        return buttonText
+      }
+      switch (buttonType) {
+        case 'edit':
+          buttonText = '编辑'
+          break
+        case 'delete':
+          buttonText = '删除'
+          break
+      }
+      return buttonText
+    },
+    onChecklistChange({ data }) {
+      this.$emit('onChecklistChange', { data })
     }
   }
 }

@@ -3,7 +3,7 @@
  * @Author: lushevol
  * @LastEditors: lushevol
  * @Date: 2019-03-29 16:40:22
- * @LastEditTime: 2019-04-04 08:43:48
+ * @LastEditTime: 2019-04-12 16:05:32
  -->
 <template>
   <div class="types-input">
@@ -11,6 +11,8 @@
     <el-select 
       v-if="componentType === 'select'" 
       v-model="inputValue" 
+      :placeholder="item.placeholder || '请选择'"
+      :class="[widthClass]"
       size="mini" 
       clearable
       :disabled="isEditable(item.editable)">
@@ -21,21 +23,15 @@
         :label="opt.note || opt.label || opt">
       </el-option>
     </el-select>
-    <!-- 文本输入框 -->
-    <el-input 
-      v-else-if="componentType === 'text'"
-      v-model="inputValue" 
-      autocomplete="off"
-      size="mini" 
-      clearable
-      :disabled="isEditable(item.editable)">
-    </el-input>
     <!-- textarea -->
     <el-input
       v-else-if="componentType === 'textarea'"
       v-model="inputValue"
+      :class="[widthClass]"
+      :placeholder="item.placeholder"
       :type="item.type"
       :rows="item.rows"
+      :autosize="{ minRows: 2, maxRows: 4}"
       size="mini"
       :disabled="item.editable === false">
     </el-input>
@@ -44,6 +40,7 @@
       v-else-if="componentType === 'date'"
       size="mini"
       v-model="inputValue"
+      :class="[widthClass]"
       :type="item.type"
       :format="item.format"
       :disabled="isEditable(item.editable)"
@@ -52,6 +49,17 @@
       start-placeholder="开始日期"
       end-placeholder="结束日期">
     </el-date-picker>
+    <!-- 文本输入框 -->
+    <el-input 
+      v-else
+      v-model="inputValue" 
+      :class="[widthClass]"
+      :placeholder="item.placeholder"
+      autocomplete="off"
+      size="mini" 
+      clearable
+      :disabled="isEditable(item.editable)">
+    </el-input>
   </div>
 </template>
 
@@ -65,7 +73,7 @@ export default {
   },
   watch: {
     inputValue(val) {
-      this.$emit('update:dataProp', { prop: this.item.prop, value: val, extra: this.extra })
+      this.$emit('update:dataProp', { prop: this.item.prop, value: val, extra: this.extra, alias: this.item.submitProp })
     },
     dataProp: {
       handler(val) {
@@ -85,6 +93,12 @@ export default {
     },
     extra: {
       type: Object
+    },
+    widthClass: {
+      type: String,
+      default: () => {
+        return ''
+      }
     }
   },
   computed: {
@@ -129,7 +143,10 @@ export default {
 <style lang="scss" scoped>
   .types-input {
     .el-input, .el-select, .el-textarea {
-      width: 400px;
+      width: 300px;
+      &.short {
+        width: 200px;
+      }
     }
   }
 </style>
