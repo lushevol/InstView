@@ -28,9 +28,13 @@ import InnerForm from './InnerForm'
 export default {
   name: 'EditDialog',
   props: {
+    // form的初始值
     dataProps: {
       type: Object,
-      required: true
+      required: true,
+      default: () => {
+        return {}
+      }
     },
     referTable: {
       type: Array,
@@ -119,6 +123,9 @@ export default {
     },
     clearData() {
       this.$refs['inner-form'].clearData()
+    },
+    showDialog() {
+      this.show.dialogVisible = true
     },
     closeDialog() {
       this.show.dialogVisible = false

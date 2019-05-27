@@ -1,0 +1,5 @@
+export { default as EditDialog } from './EditDialog'
+export { default as CrudTable } from './index'
+export { default as InnerForm } from './InnerForm'
+export { default as InstantTable } from './InstantTable'
+export { default as TypesInput } from './typesInput'

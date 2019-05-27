@@ -50,6 +50,9 @@ export default {
     dataProps: {
       type: Object,
       required: true,
+      default: () => {
+        return {}
+      }
     },
     // form的对照表，也是form列的来源
     referTable: {
@@ -60,6 +63,7 @@ export default {
     selectOptions: {
       type: Object
     },
+    // 对InnerForm的额外配置，如样式(style)
     configs: {
       type: Object,
       default: () => {
