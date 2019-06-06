@@ -9,7 +9,7 @@
         <slot name="create-btn-text">增加</slot>
       </el-button>
       <!-- 额外operation slot -->
-      <slot name="operation"></slot>
+      <slot name="header-operation"></slot>
     </template>
     <div slot="content">
       <!-- table -->
@@ -20,6 +20,9 @@
         :tableHeaderProps="table.header"
         :tableDataProps="tableData"
         :methodFunctions="methodFunctions">
+        <template slot="operation-extra-btns" slot-scope="scope">
+          <slot name="table-operation-extra-btns" :scope="scope"></slot>
+        </template>
       </InstantTable>
       <!-- 新增和编辑的弹窗 -->
       <EditDialog
@@ -45,7 +48,7 @@ import InstantTable from './InstantTable'
 import EditDialog from './EditDialog'
 
 // mixins
-import CmdbSelectOptions from '@/views/CMDB/mixins/CMDBSelectOptions'
+// import CmdbSelectOptions from '@/views/CMDB/mixins/CMDBSelectOptions'
 
 export default {
   data() {
@@ -70,22 +73,26 @@ export default {
     configs: {
       type: Object
     },
+    selectOptions: {
+      type: Object
+    },
     isAllowed2Add: {
       type: Boolean,
       default: true
     }
   },
   mixins: [
-    CmdbSelectOptions
+    // CmdbSelectOptions
   ],
   methods: {
     // 提交增加(create)/编辑(update) 数据
-    updateData({ data, editedProp }) {
-      this.methodFunctions[this.type]({ data, editedProp }).then((result) => {
+    updateData({ originData, data, editedProp }) {
+      this.methodFunctions[this.type]({ originData, data, editedProp }).then((result) => {
         this.$message.success(`${this.dialogTitle} 成功!`)
         this.queryData()
       }).catch((err) => {
         this.$message.error(`${this.dialogTitle} 失败!`)
+        console.error(err)
       });
     },
     // 提交删除(delete) 数据
@@ -96,6 +103,7 @@ export default {
         // this.initPageData() // 删除完数据不需要调用 initPageData
       }).catch((err) => {
         this.$message.error('删除失败!')
+        console.error(err)
       });
     },
     // 查询(read)数据
@@ -106,6 +114,7 @@ export default {
         }
       }).catch((err) => {
         this.$message.error('表格初始化失败!')
+        console.error(err)
       });
     },
     createNode() {
@@ -138,7 +147,7 @@ export default {
       this.initPageData()
     },
     initPageData() {
-      this.getSelectOptions()
+      // this.getSelectOptions()
       this.queryData()
     }
   },
