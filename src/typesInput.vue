@@ -3,7 +3,7 @@
  * @Author: lushevol
  * @LastEditors: lushevol
  * @Date: 2019-03-29 16:40:22
- * @LastEditTime: 2019-04-12 16:05:32
+ * @LastEditTime: 2019-05-23 14:59:02
  -->
 <template>
   <div class="types-input">
@@ -15,11 +15,15 @@
       :class="[widthClass]"
       size="mini" 
       clearable
+      filterable
+      :multiple="item.selectConfig.multiple"
+      :allow-create="item.selectConfig.multiple"
+      :default-first-option="item.selectConfig.multiple"
       :disabled="isEditable(item.editable)">
       <el-option
         v-for="(opt, optIndex) in item.options"
         :key="optIndex"
-        :value="opt.value || opt"
+        :value="opt.value || opt.prop || opt"
         :label="opt.note || opt.label || opt">
       </el-option>
     </el-select>
@@ -43,12 +47,22 @@
       :class="[widthClass]"
       :type="item.type"
       :format="item.format"
+      :value-format="item.format"
       :disabled="isEditable(item.editable)"
       clearable
       range-separator="-"
       start-placeholder="开始日期"
       end-placeholder="结束日期">
     </el-date-picker>
+    <!-- 纯文本 -->
+    <div
+      v-else-if="componentType === 'text'"
+      v-text="inputValue"
+      :class="[widthClass]"
+      :type="item.type"
+      :format="item.format"
+      :disabled="isEditable(item.editable)">
+    </div>
     <!-- 文本输入框 -->
     <el-input 
       v-else
@@ -72,12 +86,17 @@ export default {
     }
   },
   watch: {
-    inputValue(val) {
-      this.$emit('update:dataProp', { prop: this.item.prop, value: val, extra: this.extra, alias: this.item.submitProp })
+    inputValue(newVal, oldVal) {
+      // if((Object.prototype.toString.call(newVal) === '[object Array]' && newVal.length === 0) && oldVal === '') {
+      //   return false
+      // }
+      this.$emit('update:dataProp', { prop: this.item.prop, value: newVal, extra: this.extra, alias: this.item.submitProp })
     },
     dataProp: {
-      handler(val) {
-        this.initComponent()
+      handler(newVal, oldVal) {
+        if(oldVal === undefined) {
+          this.setValueFromProps()
+        }
       },
       immediate: true,
       deep: true
@@ -106,7 +125,7 @@ export default {
       return this.itemProp
     },
     componentType() {
-      let compType = 'text'  // 组件类型：text 普通输入框，select 下拉框，date：日期选择
+      let compType = ''  // 组件类型：'' 普通输入框，select 下拉框，date：日期选择
       if(this.item.options) {
         compType = 'select'
       } else if(['year', 'month', 'date', 'dates', 'week', 'datetime', 'datetimerange', 'daterange', 'monthrange', 'time'].includes(this.item.type)) {
@@ -118,13 +137,8 @@ export default {
     }
   },
   methods: {
-    initComponent() {
-      if (Object.prototype.toString.call(this.dataProp) === '[object Array]'){
-        // TODO: 因为服务器mac字段是 Array，而不涉及到编辑，因此转成 JSON String 展示
-        this.inputValue = JSON.stringify(this.dataProp)
-      } else {
-        this.inputValue = JSON.parse(JSON.stringify(this.dataProp))
-      }
+    setValueFromProps() {
+      this.inputValue = JSON.parse(JSON.stringify(this.dataProp))
     },
     isEditable(itemEditable) {
       // 如果没有设置editable，则默认可编辑

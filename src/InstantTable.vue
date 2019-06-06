@@ -12,11 +12,11 @@
         <span v-else v-text="getFieldValue(scope.data.row, item).text"></span>
       </div>
       <template slot="operation" slot-scope="scope">
+        <slot name="operation-extra-btns" :scope="scope"></slot>
         <el-button size="mini" v-if="methodFunctions.showEdit ? methodFunctions.showEdit(scope.data.row) : true" type="primary"
                    @click="editAction(scope.data)" :disabled="methodFunctions.editDisabled ? methodFunctions.editDisabled(scope.data.row) : false">{{ getButtonText('edit') }}</el-button>
         <el-button size="mini" v-if="methodFunctions.showDelete ? methodFunctions.showDelete(scope.data.row) : true" type="danger"
                    @click="deleteAction(scope.data)">{{ getButtonText('delete') }}</el-button>
-        <slot name="operation-extra-btns"></slot>
       </template>
     </search-table>
   </div>
@@ -110,7 +110,7 @@ export default {
             }
           }
         } else if (referType === 'function') {
-          return { text: item.refer({ rawVal }) }
+          return { ...item.refer({ rawVal, rowData }) }
         }
       } else {
         return { text: rawVal }

@@ -7,6 +7,7 @@
       ref="inner-form"
       @paramChange = "updateParam"
       :referTable="referTable"
+      :configs="configs"
       :selectOptions="selectOptions"
       :dataProps="dataProps">
     </InnerForm>
@@ -28,13 +29,9 @@ import InnerForm from './InnerForm'
 export default {
   name: 'EditDialog',
   props: {
-    // form的初始值
     dataProps: {
       type: Object,
-      required: true,
-      default: () => {
-        return {}
-      }
+      required: true
     },
     referTable: {
       type: Array,
@@ -97,9 +94,9 @@ export default {
     },
     Submit() {
       this.$refs['inner-form'].Submit().then((result) => {
-        const { data, editedProp } = result  
+        const { originData, data, editedProp } = result  
         if(!data) return false
-        this.$emit('submit', { data, editedProp })
+        this.$emit('submit', { originData, data, editedProp })
         // setTimeout(() => {this.$emit('refresh')}, 1000)
         this.closeDialog()
       }).catch((err) => {
@@ -123,9 +120,6 @@ export default {
     },
     clearData() {
       this.$refs['inner-form'].clearData()
-    },
-    showDialog() {
-      this.show.dialogVisible = true
     },
     closeDialog() {
       this.show.dialogVisible = false

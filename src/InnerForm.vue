@@ -3,6 +3,7 @@
     :class="['inner-form', formPosition, formCols]"
     :rules="rules" 
     :model="formData" 
+    label-suffix=":"
     ref="form">
     <div v-for="(item, index) in formLines" :key="index" class="form-row" v-if="!item.hidden">
       <el-form-item :label="item.label" :label-width="style.formLabelWidth" v-if="ifItemVisible({item, formData})" :prop="item.prop">
@@ -41,7 +42,7 @@ export default {
       editedProp: new Set(), // 编辑了的prop列表
       rules: {},
       style: {
-        formLabelWidth: '130px'
+        formLabelWidth: '190px'
       }
     }
   },
@@ -50,9 +51,6 @@ export default {
     dataProps: {
       type: Object,
       required: true,
-      default: () => {
-        return {}
-      }
     },
     // form的对照表，也是form列的来源
     referTable: {
@@ -63,7 +61,6 @@ export default {
     selectOptions: {
       type: Object
     },
-    // 对InnerForm的额外配置，如样式(style)
     configs: {
       type: Object,
       default: () => {
@@ -158,7 +155,7 @@ export default {
           delete data[item.prop]
         }
       })
-      return { data, editedProp: this.editedProp }
+      return { originData: this.originFormData , data, editedProp: this.editedProp }
     },
     /**
      * @description: 检测必填项是否都填了
@@ -208,7 +205,7 @@ export default {
           this.formLines.push({
             label: refItem.label,             // 文本
             prop: refItem.prop,               // 属性名
-            selectProp: refItem.selectProp,   // 下拉框属性名
+            // selectProp: refItem.selectProp,   // 下拉框属性名
             submitProp: refItem.submitProp,   // 提交时的属性名
             editable: refItem.editable,       // 是否可编辑
             tags: refItem.tags,               // {Object} 有值时，可增加。包含字段和数据类型
@@ -222,7 +219,8 @@ export default {
             format: refItem.format,           // 规定value的格式，仅部分type生效
             placeholder: refItem.placeholder, // placeholder 属性
             rows: refItem.rows,               // textarea rows 属性
-            options: selectOptions            // select的选项
+            options: selectOptions,           // select的选项
+            selectConfig: refItem.selectConfig || {}  // select 的配置
           })
 
           // 设置rules
@@ -407,9 +405,7 @@ export default {
     }
     &.middle .form-row {
       margin: 0 auto;
-    }
-    &.middle .form-row {
-      margin-left: 40px
+      // margin-left: 60px
     }
     .el-form-item {
       margin-bottom: -4px;
